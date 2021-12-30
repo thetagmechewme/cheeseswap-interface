@@ -196,7 +196,7 @@ pragma solidity >=0.6.6;
 
 
 // library with helper methods for oracles that are concerned with computing average prices
-library CheeseSwapOracleLibrary {
+library ShamrockSwapOracleLibrary {
     using FixedPoint for *;
 
     // helper function that returns the current block timestamp within the range of uint32, i.e. [0, 2**32 - 1]
@@ -209,11 +209,11 @@ library CheeseSwapOracleLibrary {
         address pair
     ) internal view returns (uint price0Cumulative, uint price1Cumulative, uint32 blockTimestamp) {
         blockTimestamp = currentBlockTimestamp();
-        price0Cumulative = ICheeseSwapPair(pair).price0CumulativeLast();
-        price1Cumulative = ICheeseSwapPair(pair).price1CumulativeLast();
+        price0Cumulative = IShamrockSwapPair(pair).price0CumulativeLast();
+        price1Cumulative = IShamrockSwapPair(pair).price1CumulativeLast();
 
         // if time has elapsed since the last update on the pair, mock the accumulated price values
-        (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast) = ICheeseSwapPair(pair).getReserves();
+        (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast) = IShamrockSwapPair(pair).getReserves();
         if (blockTimestampLast != blockTimestamp) {
             // subtraction overflow is desired
             uint32 timeElapsed = blockTimestamp - blockTimestampLast;
@@ -232,14 +232,14 @@ pragma solidity >=0.6.6;
 
 
 
-library CheeseSwapLibrary {
+library ShamrockSwapLibrary {
     using SafeMath for uint;
 
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-        require(tokenA != tokenB, 'CheeseSwapLibrary: IDENTICAL_ADDRESSES');
+        require(tokenA != tokenB, 'ShamrockSwapLibrary: IDENTICAL_ADDRESSES');
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'CheeseSwapLibrary: ZERO_ADDRESS');
+        require(token0 != address(0), 'ShamrockSwapLibrary: ZERO_ADDRESS');
     }
 
     // calculates the CREATE2 address for a pair without making any external calls
@@ -263,15 +263,15 @@ library CheeseSwapLibrary {
 
     // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
     function quote(uint amountA, uint reserveA, uint reserveB) internal pure returns (uint amountB) {
-        require(amountA > 0, 'CheeseSwapLibrary: INSUFFICIENT_AMOUNT');
-        require(reserveA > 0 && reserveB > 0, 'CheeseSwapLibrary: INSUFFICIENT_LIQUIDITY');
+        require(amountA > 0, 'ShamrockSwapLibrary: INSUFFICIENT_AMOUNT');
+        require(reserveA > 0 && reserveB > 0, 'ShamrockSwapLibrary: INSUFFICIENT_LIQUIDITY');
         amountB = amountA.mul(reserveB) / reserveA;
     }
 
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) internal pure returns (uint amountOut) {
-        require(amountIn > 0, 'CheeseSwapLibrary: INSUFFICIENT_INPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'CheeseSwapLibrary: INSUFFICIENT_LIQUIDITY');
+        require(amountIn > 0, 'ShamrockSwapLibrary: INSUFFICIENT_INPUT_AMOUNT');
+        require(reserveIn > 0 && reserveOut > 0, 'ShamrockSwapLibrary: INSUFFICIENT_LIQUIDITY');
         uint amountInWithFee = amountIn.mul(998);
         uint numerator = amountInWithFee.mul(reserveOut);
         uint denominator = reserveIn.mul(1000).add(amountInWithFee);
@@ -280,8 +280,8 @@ library CheeseSwapLibrary {
 
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) internal pure returns (uint amountIn) {
-        require(amountOut > 0, 'CheeseSwapLibrary: INSUFFICIENT_OUTPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'CheeseSwapLibrary: INSUFFICIENT_LIQUIDITY');
+        require(amountOut > 0, 'ShamrockSwapLibrary: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(reserveIn > 0 && reserveOut > 0, 'ShamrockSwapLibrary: INSUFFICIENT_LIQUIDITY');
         uint numerator = reserveIn.mul(amountOut).mul(1000);
         uint denominator = reserveOut.sub(amountOut).mul(998);
         amountIn = (numerator / denominator).add(1);
@@ -300,7 +300,7 @@ library CheeseSwapLibrary {
 
     // performs chained getAmountIn calculations on any number of pairs
     function getAmountsIn(address factory, uint amountOut, address[] memory path) internal view returns (uint[] memory amounts) {
-        require(path.length >= 2, 'CheeseSwapLibrary: INVALID_PATH');
+        require(path.length >= 2, 'ShamrockSwapLibrary: INVALID_PATH');
         amounts = new uint[](path.length);
         amounts[amounts.length - 1] = amountOut;
         for (uint i = path.length - 1; i > 0; i--) {
@@ -312,7 +312,7 @@ library CheeseSwapLibrary {
 
 pragma solidity >=0.5.0;
 
-interface ICheeseSwapFactory {
+interface IShamrockSwapFactory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
 
     function feeTo() external view returns (address);
@@ -330,7 +330,7 @@ interface ICheeseSwapFactory {
 
 pragma solidity >=0.5.0;
 
-interface ICheeseSwapPair {
+interface IShamrockSwapPair {
     event Approval(address indexed owner, address indexed spender, uint value);
     event Transfer(address indexed from, address indexed to, uint value);
 
@@ -383,12 +383,12 @@ interface ICheeseSwapPair {
 
 // fixed window oracle that recomputes the average price for the entire period once every period
 // note that the price average is only guaranteed to be over at least 1 period, but may be over a longer period
-contract CheeseSwapOracle {
+contract ShamrockSwapOracle {
     using FixedPoint for *;
 
     uint public constant PERIOD = 24 hours;
 
-    ICheeseSwapPair immutable pair;
+    IShamrockSwapPair immutable pair;
     address public immutable token0;
     address public immutable token1;
 
@@ -399,7 +399,7 @@ contract CheeseSwapOracle {
     FixedPoint.uq112x112 public price1Average;
 
     constructor(address factory, address tokenA, address tokenB) public {
-        ICheeseSwapPair _pair = ICheeseSwapPair(CheeseSwapLibrary.pairFor(factory, tokenA, tokenB));
+        IShamrockSwapPair _pair = IShamrockSwapPair(ShamrockSwapLibrary.pairFor(factory, tokenA, tokenB));
         pair = _pair;
         token0 = _pair.token0();
         token1 = _pair.token1();
@@ -408,16 +408,16 @@ contract CheeseSwapOracle {
         uint112 reserve0;
         uint112 reserve1;
         (reserve0, reserve1, blockTimestampLast) = _pair.getReserves();
-        require(reserve0 != 0 && reserve1 != 0, 'CheeseSwapOracle: NO_RESERVES'); // ensure that there's liquidity in the pair
+        require(reserve0 != 0 && reserve1 != 0, 'ShamrockSwapOracle: NO_RESERVES'); // ensure that there's liquidity in the pair
     }
 
     function update() external {
         (uint price0Cumulative, uint price1Cumulative, uint32 blockTimestamp) =
-            CheeseSwapOracleLibrary.currentCumulativePrices(address(pair));
+           ShamrockSwapOracleLibrary.currentCumulativePrices(address(pair));
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
 
         // ensure that at least one full period has passed since the last update
-        require(timeElapsed >= PERIOD, 'CheeseSwapOracle: PERIOD_NOT_ELAPSED');
+        require(timeElapsed >= PERIOD, 'ShamrockSwapOracle: PERIOD_NOT_ELAPSED');
 
         // overflow is desired, casting never truncates
         // cumulative price is in (uq112x112 price * seconds) units so we simply wrap it after division by time elapsed
@@ -434,7 +434,7 @@ contract CheeseSwapOracle {
         if (token == token0) {
             amountOut = price0Average.mul(amountIn).decode144();
         } else {
-            require(token == token1, 'CheeseSwapOracle: INVALID_TOKEN');
+            require(token == token1, 'ShamrockSwapOracle: INVALID_TOKEN');
             amountOut = price1Average.mul(amountIn).decode144();
         }
     }
